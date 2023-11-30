@@ -1,0 +1,85 @@
+Optimizaciones de una Task de Spark
+
+- paralelismo
+- particionado
+- almacenamiento
+- JVM
+
+Que sabemos del cluster de Spark?
+
+- Sabemos cuantos cores tiene?
+- Sabemos la RAM que tiene cada nodo?
+- Sabemos el % de CPU usado en cada nodo?
+
+Nodes = 9
+
+EFF
+Memory = 1024 MB
+V-cores = 1
+
+MAX
+Memory = 512.000 MB
+V-cores = 150
+
+Max per APP
+Memory = 256.000 MB
+V-cores = 75
+
+Normas "estandard" de configuración de las tasks
+
+- número de particiones ~ 3 x número de cores (spark.sql.shuffle.partitions)
+- número de cores por ejecutor ~ 4 - 8 (spark.executor.cores)
+- memoria por ejecutor ~
+    0.85 * (memoria_de_un_nodo / ejecutores_por_nodo) (spark.executor.memory)
+
+- Si se puede ver el % de CPU usado en los nodos del cluster
+--- Si tengo la CPU infrautilizada
+    -> aumento el numero de tasks a ejecutar en cada ejecutor
+    tareas por ejecutor = particiones / ejecutores
+    -> subimos número de particiones
+
+Ya no se pueden tunear más los parámetros, hemos llegado al óptimo
+
+- Optimizamos el código
+
+- En la fase de ejecución del MAP, puede ser que este no quepa en RAM.
+-> En ese caso se va a guardar los datos deserializados en disco.
+ -> Si queremos arreglarlo, tenemos que aumentar o bien:
+    - aumentar la execution memory de Spark
+    - número de particiones
+    - aumentar cores por ejecutor
+
+Spark SQL
+
+- Cuando particionamos los datos,
+tenemos que seleccionar bien la partition key
+
+|---------------------------------|
+| transactions                    |
+| orig | dest | amount | datetime |
+|---------------------------------|
+| "ES" | "IT" | 15.00€ | 2023-11  |
+| "ES" | "IT" | 15.00€ | 2023-10  |
+| "ES" | "IT" | 15.00€ | 2023-07  |
+| "ES" | "IT" | 15.00€ | 2023-01  |
+| "ES" | "IT" | 15.00€ | 2022-03  |
+| "FR" | "IT" | 15.00€ | 2023-11  |
+| "ES" | "IT" | 15.00€ |
+| "ES" | "IT" | 15.00€ |
+| "ES" | "IT" | 15.00€ |
+| "ES" | "IT" | 15.00€ |
+| "ES" | "IT" | 15.00€ |
+| "ES" | "IT" | 15.00€ |
+|---------------------------------|
+
+transactions Partition Key -> orig
+
+partitionBy
+
+Herramientas para optimizar el rendimiento de Spark
+
+Diagnóstico
+https://github.com/linkedin/dr-elephant
+
+Optimiza Executor count
+https://github.com/qubole/sparklens
